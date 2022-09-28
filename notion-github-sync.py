@@ -36,13 +36,13 @@ def create_page_metadata(item):
         "URL": {"type": "url", "url": item["link"]},
     }
 
-    # Handle  the closed at property
-    if not pd.isnull(item["closed_at"]):
-        properties["Closed at"]["date"] = {"start": item["closed_at"].isoformat()}
-    else:
+    # Handle the `closed at` property
+    if pd.isnull(item["closed_at"]):
         properties["Closed at"]["date"] = None
+    else:
+        properties["Closed at"]["date"] = {"start": item["closed_at"].isoformat()}
 
-    # Handle the filter property
+    # Handle the `filter` property
     filters_to_apply = [
         filter_name.replace("_", " ") for filter_name in set(item["filter"].split(":"))
     ]
