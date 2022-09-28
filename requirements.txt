@@ -1,2 +1,2 @@
-notion-client
+notion-client<1.*
 pandas
