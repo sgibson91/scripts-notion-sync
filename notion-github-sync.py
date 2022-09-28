@@ -15,18 +15,7 @@ def create_page_metadata(item):
         "Filters": {"type": "multi_select"},
         "Number": {"type": "number", "number": item["number"]},
         "PR": {"type": "checkbox", "checkbox": item["pull_request"]},
-        "Repository": {
-            "type": "rich_text",
-            "rich_text": [
-                {
-                    "text": {
-                        "content": item["repo_name"],
-                    },
-                    "plain_text": item["repo_name"],
-                    "href": item["repo_url"],
-                }
-            ],
-        },
+        "Repository": {"type": "url", "url": item["repo_url"]},
         "State": {
             "type": "select",
             "select": {"name": item["state"]},
