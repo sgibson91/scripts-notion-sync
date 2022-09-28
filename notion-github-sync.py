@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 from notion_client import Client
+from tqdm import tqdm
 
 
 def create_page_metadata(item):
@@ -88,7 +89,7 @@ df = pd.read_csv(
     infer_datetime_format=True,
 )
 
-for i, row in df.iterrows():
+for i, row in tqdm(df.iterrows(), total=len(df)):
     # Query the database
     results = notion.databases.query(
         **{
