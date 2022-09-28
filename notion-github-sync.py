@@ -102,8 +102,12 @@ for i, row in tqdm(df.iterrows(), total=len(df)):
     page_metadata = create_page_metadata(row)
 
     if results:
+        # Update existing page
         notion.pages.update(results[0]["id"], properties=page_metadata)
     else:
+        # Create new page
         notion.pages.create(
             parent={"database_id": notion_db_id}, properties=page_metadata
         )
+
+# TODO: If a page exists in the Notion database, but NOT in the csv file, delete the page
