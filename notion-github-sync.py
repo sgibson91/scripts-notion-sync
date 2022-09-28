@@ -78,25 +78,115 @@ df = pd.read_csv(
     infer_datetime_format=True,
 )
 
-for i, row in tqdm(df.iterrows(), total=len(df)):
-    # Query the database
-    results = notion.databases.query(
-        **{
-            "database_id": notion_db_id,
-            "filter": {"property": "Title", "text": {"contains": row["raw_title"]}},
-        }
-    ).get("results")
+# Create a set of unique issue titles from the CSV
+df_set = set(df["raw_title"].values)
 
-    # Generate metadata for the item
-    page_metadata = create_page_metadata(row)
+# Create an empty DataFrame to store the Notion db in
+notion_db = pd.DataFrame(columns=["page_id", "title", "archived"])
+notion_db["archived"] = notion_db["archived"].astype("bool")
 
-    if results:
-        # Update existing page
-        notion.pages.update(results[0]["id"], properties=page_metadata)
-    else:
-        # Create new page
+# First iteration - querying the Notion database for pages
+# No filter will return all pages
+resp = notion.databases.query(notion_db_id)
+results = resp.get("results")
+
+# Append each page to the DataFrame
+for page in results:
+    tmp_df = pd.DataFrame(
+        {
+            "page_id": page["id"],
+            "title": page["properties"]["Title"]["title"][0]["plain_text"],
+            "archived": page["archived"],
+        },
+        index=[0],
+    )
+    notion_db = pd.concat([notion_db, tmp_df], ignore_index=True)
+
+# Pagination!
+# has_more variable is boolean, is True if there are more pages to process
+# next_cursor variable contains the position to pick-up querying from, it is only present
+# if has_more is True
+while resp["has_more"]:
+    resp = notion.databases.query(notion_db_id, start_cursor=resp["next_cursor"])
+    results = resp.get("results")
+
+    for page in results:
+        tmp_df = pd.DataFrame(
+            {
+                "page_id": page["id"],
+                "title": page["properties"]["Title"]["title"][0]["plain_text"],
+                "archived": page["archived"],
+            },
+            index=[0],
+        )
+        notion_db = pd.concat([notion_db, tmp_df], ignore_index=True)
+
+notion_db.reset_index(inplace=True, drop=True)
+
+# Create a set of unique titles from the Notion db
+notion_db_set = set(notion_db["title"].values)
+
+# Intersection - Titles which are in BOTH the CSV and Notion db
+to_be_updated = df_set.intersection(notion_db_set)
+print("Number of pages to update:", len(to_be_updated))
+
+# Difference - Titles which ARE in the CSV but ARE NOT in the Notion db
+to_be_created = df_set.difference(notion_db_set)
+print("Number of pages to create:", len(to_be_created))
+
+# Difference - Titles which ARE in the Notion db but ARE NOT in the CSV
+to_be_archived = notion_db_set.difference(df_set)
+print("Number of pages to archive:", len(to_be_archived))
+
+if len(to_be_updated) > 0:
+    print("Updating existing pages...")
+    extra_pages_to_archive = []
+    for title in tqdm(to_be_updated, total=len(to_be_updated)):
+        # Find the page ID
+        page_id = notion_db["page_id"].loc[notion_db["title"] == title].values
+
+        if len(page_id) > 1:
+            # Append extra page IDs to list to archive later
+            extra_pages_to_archive.extend(page_id[1:])
+
+        page_id = page_id[0]
+
+        # Find the corresponding row in the CSV dataframe
+        row = df[df["raw_title"] == title].iloc[0]
+
+        # Generate page metadata
+        page_metadata = create_page_metadata(row)
+
+        # Update the page
+        notion.pages.update(page_id, properties=page_metadata)
+
+if len(to_be_created) > 0:
+    print("Creating new pages...")
+    for title in tqdm(to_be_created, total=len(to_be_created)):
+        # Find the corresponding row in the CSV dataframe
+        row = df[df["raw_title"] == title].iloc[0]
+
+        # Generate page metadata
+        page_metadata = create_page_metadata(row)
+
+        # Create the page
         notion.pages.create(
             parent={"database_id": notion_db_id}, properties=page_metadata
         )
 
-# TODO: If a page exists in the Notion database, but NOT in the csv file, delete the page
+if len(to_be_archived) > 0:
+    print("Archiving old pages...")
+    for title in tqdm(to_be_archived, total=len(to_be_archived)):
+        # Find the page IDs - could be multiple
+        page_ids = notion_db[notion_db["title"] == title]["page_id"].values
+
+        for page_id in page_ids:
+            # Archive the page
+            notion.pages.update(page_id, archived=True)
+
+if len(extra_pages_to_archive) > 0:
+    print("Archiving duplicated pages...")
+    for page_id in extra_pages_to_archive:
+        notion.pages.update(page_id, archived=True)
+
+print("Sync complete!")
