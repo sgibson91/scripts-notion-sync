@@ -28,8 +28,8 @@ def create_page_metadata(item):
         },
         "State": {
             "type": "select",
-            "select": {"name": "open"},
-        },  # {"name": item["state"]}
+            "select": {"name": item["state"]},
+        },
         "Title": {
             "title": [
                 {
