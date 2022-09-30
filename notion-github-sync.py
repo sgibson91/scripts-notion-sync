@@ -13,8 +13,11 @@ def create_page_metadata(item):
             "date": {"start": item["created_at"].isoformat()},
         },
         "Filters": {"type": "multi_select"},
-        "Number": {"type": "number", "number": item["number"]},
-        "PR": {"type": "checkbox", "checkbox": item["pull_request"]},
+        "Number": {"type": "number", "number": int(item["number"])},
+        "PR": {
+            "type": "checkbox",
+            "checkbox": bool(item["pull_request"]),
+        },
         "Repository": {"type": "url", "url": item["repo_url"]},
         "State": {
             "type": "select",
