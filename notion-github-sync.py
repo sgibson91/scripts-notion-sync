@@ -61,7 +61,6 @@ data_url = "https://raw.githubusercontent.com/sgibson91/github-activity-dashboar
 df = pd.read_csv(
     data_url,
     parse_dates=["created_at", "updated_at", "closed_at"],
-    infer_datetime_format=True,
 )
 
 # Create a set of unique issue titles from the CSV
