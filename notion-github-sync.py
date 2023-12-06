@@ -7,18 +7,12 @@ from tqdm import tqdm
 
 def create_page_metadata(item):
     properties = {
-        "Closed at": {"type": "date"},
-        "Created at": {
-            "type": "date",
-            "date": {"start": item["created_at"].isoformat()},
-        },
         "Filters": {"type": "multi_select"},
-        "Number": {"type": "number", "number": int(item["number"])},
         "PR": {
             "type": "checkbox",
             "checkbox": bool(item["pull_request"]),
         },
-        "Repository": {"type": "url", "url": item["repo_url"]},
+        "Repository URL": {"type": "url", "url": item["repo_url"]},
         "State": {
             "type": "select",
             "select": {"name": item["state"]},
@@ -32,19 +26,8 @@ def create_page_metadata(item):
                 }
             ]
         },
-        "Updated at": {
-            "type": "date",
-            "date": {"start": item["updated_at"].isoformat()},
-        },
         "URL": {"type": "url", "url": item["link"]},
     }
-
-    # Handle the `closed at` property
-    if pd.isnull(item["closed_at"]):
-        properties["Closed at"]["date"] = None
-    else:
-        properties["Closed at"]["date"] = {"start": item["closed_at"].isoformat()}
-
     # Handle the `filter` property
     filters_to_apply = [
         filter_name.replace("_", " ") for filter_name in set(item["filter"].split(":"))
