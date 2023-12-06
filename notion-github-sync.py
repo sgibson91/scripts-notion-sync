@@ -63,6 +63,12 @@ df = pd.read_csv(
     parse_dates=["created_at", "updated_at", "closed_at"],
 )
 
+# Filter for items that are 'review_requested' or 'assigned'
+df = df[df["filter"].str.contains("assigned|review_requested")]
+
+# Filter for items that are open
+df = df[df["state"] == "open"]
+
 # Create a set of unique issue titles from the CSV
 df_set = set(df["raw_title"].values)
 
