@@ -12,6 +12,7 @@ def create_page_metadata(item):
             "type": "checkbox",
             "checkbox": bool(item["pull_request"]),
         },
+        "Repository URL": {"type": "url", "url": item["repo_url"]},
         "Title": {
             "title": [
                 {
