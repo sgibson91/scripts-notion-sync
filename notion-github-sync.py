@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 def create_page_metadata(item):
     properties = {
-        # "Filters": {"type": "multi_select"},
+        "Filters": {"type": "multi_select"},
         "PR": {
             "type": "checkbox",
             "checkbox": bool(item["pull_request"]),
@@ -24,15 +24,16 @@ def create_page_metadata(item):
         },
         "URL": {"type": "url", "url": item["link"]},
     }
-    # # Handle the `filter` property
-    # filters_to_apply = [
-    #     filter_name.replace("_", " ") for filter_name in set(item["filter"].split(":"))
-    # ]
-    # properties["Filters"]["multi_select"] = []
 
-    # # Populate filters
-    # for filter_name in filters_to_apply:
-    #     properties["Filters"]["multi_select"].append({"name": filter_name})
+    # Handle the `filter` property
+    filters_to_apply = [
+        filter_name.replace("_", " ") for filter_name in set(item["filter"].split(":"))
+    ]
+    properties["Filters"]["multi_select"] = []
+
+    # Populate filters
+    for filter_name in filters_to_apply:
+        properties["Filters"]["multi_select"].append({"name": filter_name})
 
     return properties
 
