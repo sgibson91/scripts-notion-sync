@@ -23,6 +23,14 @@ def create_page_metadata(item):
             ]
         },
         "URL": {"type": "url", "url": item["link"]},
+        "Created at": {
+            "type": "date",
+            "date": {"start": item["created_at"].isoformat()},
+        },
+        "Updated at": {
+            "type": "date",
+            "date": {"start": item["updated_at"].isoformat()},
+        },
     }
 
     # Handle the `filter` property
