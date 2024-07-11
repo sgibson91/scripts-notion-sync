@@ -210,6 +210,19 @@ print("[green]Number of pages to be created:", len(to_be_created))
 to_be_archived = notion_pages_title_set.difference(goodreads_books_title_set)
 print("[green]Number of pages to be archived:", len(to_be_archived))
 
+if len(to_be_created) > 0:
+    print("[green]Creating new pages...")
+    for title in tqdm(to_be_created, total=len(to_be_created)):
+        # Find the corresponding row in the Goodreads df
+        row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+
+        notion.pages.create(
+            parent={"database_id": NOTION_DATABASE_ID},
+            icon=row["page_metadata"]["icon"],
+            properties=row["page_metadata"]["properties"],
+            children=row["page_metadata"]["children"],
+        )
+
 if len(to_be_updated) > 0:
     print("[green]Updating existing pages...")
     extra_pages_to_archive = []
@@ -228,23 +241,7 @@ if len(to_be_updated) > 0:
         row = goodreads_books[goodreads_books["title"] == title].iloc[0]
 
         # Update the page
-        notion.pages.update(
-            page_id,
-            properties=row["page_metadata"]["properties"]
-        )
-
-if len(to_be_created) > 0:
-    print("[green]Creating new pages...")
-    for title in tqdm(to_be_created, total=len(to_be_created)):
-        # Find the corresponding row in the Goodreads df
-        row = goodreads_books[goodreads_books["title"] == title].iloc[0]
-
-        notion.pages.create(
-            parent={"database_id": NOTION_DATABASE_ID},
-            icon=row["page_metadata"]["icon"],
-            properties=row["page_metadata"]["properties"],
-            children=row["page_metadata"]["children"]
-        )
+        notion.pages.update(page_id, properties=row["page_metadata"]["properties"])
 
 if len(to_be_archived) > 0:
     print("[green]Archiving old pages...")
