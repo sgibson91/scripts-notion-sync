@@ -1,13 +1,14 @@
-import os
-import feedparser
-import jinja2
 import json
-import pandas as pd
+import os
 import re
 from datetime import datetime
+from pathlib import Path
+
+import feedparser
+import jinja2
+import pandas as pd
 from dotenv import load_dotenv
 from notion_client import Client
-from pathlib import Path
 from rich import print
 from tqdm import tqdm
 
@@ -30,7 +31,7 @@ def clean_book_description(description):
 
 
 def extract_series_from_title(title):
-    match = re.search("(?<=\().*?(?=#)", title)
+    match = re.search(r"(?<=\().*?(?=#)", title)
     if match is not None:
         return match.group(0).strip(",")
     else:
@@ -38,7 +39,6 @@ def extract_series_from_title(title):
 
 
 def create_page_metadata(entry, shelf):
-
     # We have shelves that are `read-2` or `to-read-3` and we want to remove the
     # numbering
     if shelf.startswith("read-"):
@@ -71,19 +71,27 @@ def create_page_metadata(entry, shelf):
             os.mkdir(PATH.joinpath("errors"))
 
         # Create a file to save the faulty json to
-        fn = re.sub("[^\w]", "_", entry.title) + ".json"
+        fn = re.sub(r"[^\w]", "_", entry.title) + ".json"
         with open(PATH.joinpath("errors", fn), "w") as f:
             f.write(page_metadata)
 
-        raise(err)
-    
-    #Add extra variables to the template that require more complex logic
-    page_metadata["properties"]["Fiction?"]["checkbox"] = "non-fiction" not in entry.user_shelves
-    page_metadata["properties"]["Rating"]["number"] = int(entry.user_rating) if int(entry.user_rating) > 0 else None
+        raise err
+
+    # Add extra variables to the template that require more complex logic
+    page_metadata["properties"]["Fiction?"]["checkbox"] = (
+        "non-fiction" not in entry.user_shelves
+    )
+    page_metadata["properties"]["Rating"]["number"] = (
+        int(entry.user_rating) if int(entry.user_rating) > 0 else None
+    )
 
     if shelf == "currently-reading":
-        date_started = datetime.strptime(entry.user_date_added, "%a, %d %b %Y %H:%M:%S %z")
-        page_metadata["properties"]["Date last started"] = {"date": {"start": date_started.strftime("%Y-%m-%d")}}
+        date_started = datetime.strptime(
+            entry.user_date_added, "%a, %d %b %Y %H:%M:%S %z"
+        )
+        page_metadata["properties"]["Date last started"] = {
+            "date": {"start": date_started.strftime("%Y-%m-%d")}
+        }
 
     if shelf.startswith("read"):
         try:
@@ -101,22 +109,21 @@ def create_page_metadata(entry, shelf):
     # of length 2000 characters.
     if len(book_description) > 2000:
         i_total = len(book_description) // 2000
-        for i in range(1, i_total+1):
-            next_block = book_description[2000*i:2000*(i+1)]
+        for i in range(1, i_total + 1):
+            next_block = book_description[2000 * i: 2000 * (i + 1)]
             page_metadata["children"].append(
                 {
                     "object": "block",
                     "type": "paragraph",
                     "paragraph": {
-                        "rich_text": [{
-                            "type": "text",
-                            "text": {
-                                "content": next_block,
-                                "link": None
+                        "rich_text": [
+                            {
+                                "type": "text",
+                                "text": {"content": next_block, "link": None},
                             }
-                        }],
-                        "color": "default"
-                    }
+                        ],
+                        "color": "default",
+                    },
                 }
             )
 
@@ -155,7 +162,9 @@ for shelf in shelves:
     for entry in feed.entries:
         try:
             page_metadata = create_page_metadata(entry, shelf)
-            goodreads_books.append({"title": entry.title, "page_metadata": page_metadata})
+            goodreads_books.append(
+                {"title": entry.title, "page_metadata": page_metadata}
+            )
         except json.decoder.JSONDecodeError as err:
             print(f"[red]Skipping {entry.title}")
             print(err)
@@ -171,11 +180,13 @@ results = resp.get("results")
 
 notion_pages = []
 for page in results:
-    notion_pages.append({
-        "page_id": page["id"],
-        "title": page["properties"]["Title"]["title"][0]["plain_text"],
-        "archived": page["archived"]
-    })
+    notion_pages.append(
+        {
+            "page_id": page["id"],
+            "title": page["properties"]["Title"]["title"][0]["plain_text"],
+            "archived": page["archived"],
+        }
+    )
 
 # Pagination!
 # has_more variable is boolean, is True if there are more pages to process
@@ -186,11 +197,13 @@ while resp["has_more"]:
     results = resp.get("results")
 
     for page in results:
-        notion_pages.append({
-            "page_id": page["id"],
-            "title": page["properties"]["Title"]["title"][0]["plain_text"],
-            "archived": page["archived"]            
-        })
+        notion_pages.append(
+            {
+                "page_id": page["id"],
+                "title": page["properties"]["Title"]["title"][0]["plain_text"],
+                "archived": page["archived"],
+            }
+        )
 
 # Convert into a dataframe
 notion_pages = pd.DataFrame(notion_pages)
@@ -227,7 +240,6 @@ if len(to_be_updated) > 0:
     print("[green]Updating existing pages...")
     extra_pages_to_archive = []
     for title in tqdm(to_be_updated, total=len(to_be_updated)):
-
         # Find the page ID
         page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
 
