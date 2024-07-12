@@ -32,7 +32,7 @@ def clean_book_description(description):
 def extract_series_from_title(title):
     match = re.search(r"(?<=\().*?(?=#)", title)
     if match is not None:
-        return match.group(0).strip(",")
+        return match.group(0).replace(",", "").strip()
     else:
         return ""
 
