@@ -1,0 +1,92 @@
+{
+    "children": [
+        {
+            "object": "block",
+            "type": "image",
+            "image": {
+                "type": "external",
+                "external": {
+                    "url": "{{ cover_url }}"
+                }
+            }
+        },
+        {
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [{
+                    "type": "text",
+                    "text": {
+                        "content": "Summary",
+                        "link": null
+                    }
+                }],
+                "color": "default",
+                "is_toggleable": false
+            }
+        },
+        {
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "rich_text": [{
+                    "type": "text",
+                    "text": {
+                        "content": "{{ book_description }}",
+                        "link": null
+                    }
+                }],
+                "color": "default"
+            }
+        }
+    ],
+    "icon": {
+        "type": "emoji",
+        "emoji": "📖"
+    },
+    "properties": {
+        "Title": {
+            "title": [{
+                "text": {
+                    "content": "{{ book_title }}"
+                }
+            }]
+        },
+        "Author": {
+            "type": "rich_text",
+            "rich_text": [{
+                "type": "text",
+                "text": {
+                    "content": "{{ author_name }}"
+                }
+            }]
+        },
+        "Series": {
+            "type": "rich_text",
+            "rich_text": [{
+                "type": "text",
+                "text": {
+                    "content": "{{ series }}"
+                }
+            }]
+        },
+        "Goodreads": {
+            "type": "url",
+            "url": "https://www.goodreads.com/book/show/{{ book_id }}"
+        },
+        "Fiction?": {
+            "type": "checkbox",
+            "checkbox": false
+        },
+        "Rating": {
+            "type": "number",
+            "number": null
+        },
+        "Status": {
+            "type": "status",
+            "status": {
+                "name": "{{ shelf }}"
+            }
+        }
+    }
+}

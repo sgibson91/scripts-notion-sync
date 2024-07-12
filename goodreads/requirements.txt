@@ -1,0 +1,7 @@
+feedparser
+jinja2
+notion-client
+pandas
+python-dotenv
+rich
+tqdm
