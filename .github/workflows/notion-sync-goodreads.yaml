@@ -1,0 +1,35 @@
+name: Sync Goodreads to Notion
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run daily at 01:00 UTC
+    - cron: "0 1 * * *"
+
+jobs:
+  sync-goodreads-activity:
+    runs-on: ubuntu-latest
+    environment: goodreads
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: goodreads
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run script to sync data
+        working-directory: goodreads
+        run: |
+          python notion-sync.py
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          GOODREADS_RSS_KEY: ${{ secrets.GOODREADS_RSS_KEY }}
