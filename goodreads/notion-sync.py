@@ -101,7 +101,7 @@ def create_page_metadata(entry, shelf):
                 "date": {"start": date_read_at.strftime("%Y-%m-%d")}
             }
         except ValueError:
-            page_metadata["properties"]["Date last read"] = {"date": {"start": ""}}
+            pass
 
     # If the book description is longer than 2000 characters, the upload to
     # Notion will fail. So we chunk up the description into multiple objects
