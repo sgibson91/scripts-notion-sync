@@ -9,6 +9,7 @@ on:
 jobs:
   sync-github-activity:
     runs-on: ubuntu-latest
+    environment: github
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
