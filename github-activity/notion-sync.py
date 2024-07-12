@@ -63,19 +63,19 @@ notion = Client(auth=notion_token)
 
 # Consume the raw data from sister repo
 data_url = "https://raw.githubusercontent.com/sgibson91/github-activity-dashboard/main/github-activity.csv"
-df = pd.read_csv(
+csv_df = pd.read_csv(
     data_url,
     parse_dates=["created_at", "updated_at", "closed_at"],
 )
 
 # Filter for items that are 'review_requested' or 'assigned'
-df = df[df["filter"].str.contains("assigned|review_requested")]
+csv_df = csv_df[csv_df["filter"].str.contains("assigned|review_requested")]
 
 # Filter for items that are open
-df = df[df["state"] == "open"]
+csv_df = csv_df[csv_df["state"] == "open"]
 
 # Create a set of unique issue titles from the CSV
-df_set = set(df["raw_title"].values)
+csv_df_set = set(csv_df["raw_title"].values)
 
 # Create an empty DataFrame to store the Notion db in
 notion_db = pd.DataFrame(columns=["page_id", "title", "archived"])
@@ -123,15 +123,15 @@ notion_db.reset_index(inplace=True, drop=True)
 notion_db_set = set(notion_db["title"].values)
 
 # Intersection - Titles which are in BOTH the CSV and Notion db
-to_be_updated = df_set.intersection(notion_db_set)
+to_be_updated = csv_df_set.intersection(notion_db_set)
 print("Number of pages to update:", len(to_be_updated))
 
 # Difference - Titles which ARE in the CSV but ARE NOT in the Notion db
-to_be_created = df_set.difference(notion_db_set)
+to_be_created = csv_df_set.difference(notion_db_set)
 print("Number of pages to create:", len(to_be_created))
 
 # Difference - Titles which ARE in the Notion db but ARE NOT in the CSV
-to_be_archived = notion_db_set.difference(df_set)
+to_be_archived = notion_db_set.difference(csv_df_set)
 print("Number of pages to archive:", len(to_be_archived))
 
 if len(to_be_updated) > 0:
@@ -148,7 +148,7 @@ if len(to_be_updated) > 0:
         page_id = page_id[0]
 
         # Find the corresponding row in the CSV dataframe
-        row = df[df["raw_title"] == title].iloc[0]
+        row = csv_df[csv_df["raw_title"] == title].iloc[0]
 
         # Generate page metadata
         page_metadata = create_page_metadata(row)
@@ -160,7 +160,7 @@ if len(to_be_created) > 0:
     print("Creating new pages...")
     for title in tqdm(to_be_created, total=len(to_be_created)):
         # Find the corresponding row in the CSV dataframe
-        row = df[df["raw_title"] == title].iloc[0]
+        row = csv_df[csv_df["raw_title"] == title].iloc[0]
 
         # Generate page metadata
         page_metadata = create_page_metadata(row)
