@@ -7,7 +7,6 @@ from pathlib import Path
 import feedparser
 import jinja2
 import pandas as pd
-from dotenv import load_dotenv
 from notion_client import Client
 from rich import print
 from tqdm import tqdm
@@ -130,8 +129,13 @@ def create_page_metadata(entry, shelf):
     return page_metadata
 
 
-# Load in .env file
-load_dotenv()
+CI = os.getenv("CI", False)
+if not CI:
+    from dotenv import load_dotenv
+
+    # Load in .env file
+    load_dotenv()
+
 GOODREADS_RSS_KEY = os.getenv("GOODREADS_RSS_KEY")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
