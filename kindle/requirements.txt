@@ -1,0 +1,5 @@
+notion_client
+pandas
+python-dotenv
+rich
+tqdm
