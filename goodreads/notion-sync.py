@@ -21,7 +21,7 @@ with open(PATH.joinpath("notion_page_book_template.json")) as f:
 
 def clean_book_description(description):
     # Remove any html tags from the book description
-    description = re.sub("(<[^>]*>)", "", description)
+    description = re.sub(r"(<[^>]*>)", "", description)
 
     # Ensure any double quotes and newlines are properly escaped or removed
     description = description.replace('\"', '\\"').replace("\n", "")
@@ -52,7 +52,7 @@ def create_page_metadata(entry, shelf):
         "author_name": entry.author_name,
         "book_description": book_description[:2000],
         "book_id": entry.book_id,
-        "book_title": entry.title,
+        "book_title": entry.title.replace('"', "'"),
         "cover_url": entry.book_large_image_url,
         "rating_num": int(entry.user_rating) if int(entry.user_rating) > 0 else None,
         "series": extract_series_from_title(entry.title),
@@ -257,7 +257,11 @@ if len(to_be_updated) > 0:
         row = goodreads_books[goodreads_books["title"] == title].iloc[0]
 
         # Update the page
-        notion.pages.update(page_id, properties=row["page_metadata"]["properties"])
+        notion.pages.update(
+            page_id,
+            properties=row["page_metadata"]["properties"],
+            children=row["page_metadata"]["children"],
+        )
 
 if len(to_be_archived) > 0:
     print("[green]Archiving old pages...")
