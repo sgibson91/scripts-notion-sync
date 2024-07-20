@@ -18,6 +18,10 @@ PATH = Path(__file__).parent
 with open(PATH.joinpath("notion_page_book_template.json")) as f:
     template = jinja2.Template(f.read())
 
+# Read in Goodreads shelves to query
+with open(PATH.joinpath("shelves.txt")) as f:
+    shelves = [line.strip("\n") for line in f.readlines()]
+
 
 def clean_book_description(description):
     # Remove any html tags from the book description
@@ -142,18 +146,6 @@ NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 
 # Construct RSS base URL
 rss_base_url = f"https://www.goodreads.com/review/list_rss/122919504?key={GOODREADS_RSS_KEY}&shelf="
-
-# Goodreads shelves to query
-shelves = [
-    "abandoned",
-    "currently-reading",
-    "read",
-    "read-in-part",
-    "to-read",
-    "to-read-2",
-    "to-read-3",
-    "up-next",
-]
 
 # Authenticate the notion client
 notion = Client(auth=NOTION_TOKEN)
