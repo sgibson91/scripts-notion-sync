@@ -8,8 +8,7 @@ import feedparser
 import jinja2
 import pandas as pd
 from notion_client import Client
-from rich import print
-from tqdm import tqdm
+from rich.progress import track
 
 # Get the path to the folder this script is in
 PATH = Path(__file__).parent
@@ -221,7 +220,7 @@ print("[green]Number of pages to be archived:", len(to_be_archived))
 
 if len(to_be_created) > 0:
     print("[green]Creating new pages...")
-    for title in tqdm(to_be_created, total=len(to_be_created)):
+    for title in track(to_be_created):
         # Find the corresponding row in the Goodreads df
         row = goodreads_books[goodreads_books["title"] == title].iloc[0]
 
@@ -235,7 +234,7 @@ if len(to_be_created) > 0:
 if len(to_be_updated) > 0:
     print("[green]Updating existing pages...")
     extra_pages_to_archive = []
-    for title in tqdm(to_be_updated, total=len(to_be_updated)):
+    for title in track(to_be_updated):
         # Find the page ID
         page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
 
@@ -257,7 +256,7 @@ if len(to_be_updated) > 0:
 
 if len(to_be_archived) > 0:
     print("[green]Archiving old pages...")
-    for title in tqdm(to_be_archived, total=len(to_be_archived)):
+    for title in track(to_be_archived):
         # Find the pages IDs - could be multiple
         page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
 

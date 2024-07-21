@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 from notion_client import Client
-from tqdm import tqdm
+from rich.progress import track
 
 
 def create_page_metadata(item):
@@ -137,7 +137,7 @@ print("Number of pages to archive:", len(to_be_archived))
 if len(to_be_updated) > 0:
     print("Updating existing pages...")
     extra_pages_to_archive = []
-    for title in tqdm(to_be_updated, total=len(to_be_updated)):
+    for title in track(to_be_updated):
         # Find the page ID
         page_id = notion_db["page_id"].loc[notion_db["title"] == title].values
 
@@ -158,7 +158,7 @@ if len(to_be_updated) > 0:
 
 if len(to_be_created) > 0:
     print("Creating new pages...")
-    for title in tqdm(to_be_created, total=len(to_be_created)):
+    for title in track(to_be_created):
         # Find the corresponding row in the CSV dataframe
         row = csv_df[csv_df["raw_title"] == title].iloc[0]
 
@@ -172,7 +172,7 @@ if len(to_be_created) > 0:
 
 if len(to_be_archived) > 0:
     print("Archiving old pages...")
-    for title in tqdm(to_be_archived, total=len(to_be_archived)):
+    for title in track(to_be_archived):
         # Find the page IDs - could be multiple
         page_ids = notion_db[notion_db["title"] == title]["page_id"].values
 
