@@ -2,7 +2,10 @@ import os
 
 import pandas as pd
 from notion_client import Client
+from rich.console import Console
 from rich.progress import track
+
+console = Console(force_terminal=True)
 
 
 def create_page_metadata(item):
@@ -124,18 +127,18 @@ notion_db_set = set(notion_db["title"].values)
 
 # Intersection - Titles which are in BOTH the CSV and Notion db
 to_be_updated = csv_df_set.intersection(notion_db_set)
-print("Number of pages to update:", len(to_be_updated))
+console.print("Number of pages to update:", len(to_be_updated))
 
 # Difference - Titles which ARE in the CSV but ARE NOT in the Notion db
 to_be_created = csv_df_set.difference(notion_db_set)
-print("Number of pages to create:", len(to_be_created))
+console.print("Number of pages to create:", len(to_be_created))
 
 # Difference - Titles which ARE in the Notion db but ARE NOT in the CSV
 to_be_archived = notion_db_set.difference(csv_df_set)
-print("Number of pages to archive:", len(to_be_archived))
+console.print("Number of pages to archive:", len(to_be_archived))
 
 if len(to_be_updated) > 0:
-    print("Updating existing pages...")
+    console.print("Updating existing pages...")
     extra_pages_to_archive = []
     for title in track(to_be_updated):
         # Find the page ID
@@ -157,7 +160,7 @@ if len(to_be_updated) > 0:
         notion.pages.update(page_id, properties=page_metadata)
 
 if len(to_be_created) > 0:
-    print("Creating new pages...")
+    console.print("Creating new pages...")
     for title in track(to_be_created):
         # Find the corresponding row in the CSV dataframe
         row = csv_df[csv_df["raw_title"] == title].iloc[0]
@@ -171,7 +174,7 @@ if len(to_be_created) > 0:
         )
 
 if len(to_be_archived) > 0:
-    print("Archiving old pages...")
+    console.print("Archiving old pages...")
     for title in track(to_be_archived):
         # Find the page IDs - could be multiple
         page_ids = notion_db[notion_db["title"] == title]["page_id"].values
@@ -181,8 +184,8 @@ if len(to_be_archived) > 0:
             notion.pages.update(page_id, archived=True)
 
 if len(extra_pages_to_archive) > 0:
-    print("Archiving duplicated pages...")
+    console.print("Archiving duplicated pages...")
     for page_id in extra_pages_to_archive:
         notion.pages.update(page_id, archived=True)
 
-print("Sync complete!")
+console.print("Sync complete!")
