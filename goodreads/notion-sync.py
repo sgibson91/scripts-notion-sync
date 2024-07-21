@@ -8,8 +8,10 @@ import feedparser
 import jinja2
 import pandas as pd
 from notion_client import Client
-from rich import print
-from tqdm import tqdm
+from rich.console import Console
+from rich.progress import track
+
+console = Console(force_terminal=True)
 
 # Get the path to the folder this script is in
 PATH = Path(__file__).parent
@@ -162,8 +164,8 @@ for shelf in shelves:
                 {"title": entry.title, "page_metadata": page_metadata}
             )
         except json.decoder.JSONDecodeError as err:
-            print(f"[red]Skipping {entry.title}")
-            print(err)
+            console.print(f"[red]Skipping {entry.title}")
+            console.print(err)
             continue
 
 # Convert into a dataframe
@@ -208,20 +210,20 @@ notion_pages_title_set = set(notion_pages["title"].values)
 
 # Intersection - Titles which are in BOTH Goodreads RSS feed and Notion DB
 to_be_updated = goodreads_books_title_set.intersection(notion_pages_title_set)
-print("[green]Number of pages to be updated:", len(to_be_updated))
+console.print("[green]Number of pages to be updated:", len(to_be_updated))
 
 # Difference - Titles which ARE in the Goodreads RSS feed but ARE NOT in the
 # Notion DB
 to_be_created = goodreads_books_title_set.difference(notion_pages_title_set)
-print("[green]Number of pages to be created:", len(to_be_created))
+console.print("[green]Number of pages to be created:", len(to_be_created))
 
 # Difference - Titles which ARE in the Notion DB but ARE NOT in the Goodreads RSS feed
 to_be_archived = notion_pages_title_set.difference(goodreads_books_title_set)
-print("[green]Number of pages to be archived:", len(to_be_archived))
+console.print("[green]Number of pages to be archived:", len(to_be_archived))
 
 if len(to_be_created) > 0:
-    print("[green]Creating new pages...")
-    for title in tqdm(to_be_created, total=len(to_be_created)):
+    console.print("[green]Creating new pages...")
+    for title in track(to_be_created):
         # Find the corresponding row in the Goodreads df
         row = goodreads_books[goodreads_books["title"] == title].iloc[0]
 
@@ -233,9 +235,9 @@ if len(to_be_created) > 0:
         )
 
 if len(to_be_updated) > 0:
-    print("[green]Updating existing pages...")
+    console.print("[green]Updating existing pages...")
     extra_pages_to_archive = []
-    for title in tqdm(to_be_updated, total=len(to_be_updated)):
+    for title in track(to_be_updated):
         # Find the page ID
         page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
 
@@ -256,8 +258,8 @@ if len(to_be_updated) > 0:
         )
 
 if len(to_be_archived) > 0:
-    print("[green]Archiving old pages...")
-    for title in tqdm(to_be_archived, total=len(to_be_archived)):
+    console.print("[green]Archiving old pages...")
+    for title in track(to_be_archived):
         # Find the pages IDs - could be multiple
         page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
 
@@ -266,8 +268,8 @@ if len(to_be_archived) > 0:
             notion.pages.update(page_id, archived=True)
 
 if len(extra_pages_to_archive) > 0:
-    print("[green]Archiving duplicated pages...")
+    console.print("[green]Archiving duplicated pages...")
     for page_id in extra_pages_to_archive:
         notion.pages.update(page_id, archived=True)
 
-print("[green]Sync complete!")
+console.print("[green]Sync complete!")

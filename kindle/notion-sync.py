@@ -3,8 +3,10 @@ import re
 
 import pandas as pd
 from notion_client import Client
-from rich import print
-from tqdm import tqdm
+from rich.console import Console
+from rich.progress import track
+
+console = Console(force_terminal=True)
 
 
 def read_clippings_file(filepath):
@@ -177,19 +179,19 @@ set_notion = set(notion_pages["title"].values)
 # Difference - Titles which ARE in kindle highlights but ARE NOT in the
 # Notion DB
 to_be_created = set_highlights.difference(set_notion)
-print("[green]Number of pages to be created:", len(to_be_created))
+console.print("[green]Number of pages to be created:", len(to_be_created))
 
 # Intersection - Titles which are in BOTH kindle highlights and Notion DB
 to_be_updated = set_highlights.intersection(set_notion)
-print("[green]Number of pages to be updated:", len(to_be_updated))
+console.print("[green]Number of pages to be updated:", len(to_be_updated))
 
 # Difference - Titles which ARE in the Notion DB but ARE NOT in kindle highlights
 to_be_archived = set_notion.difference(set_notion)
-print("[green]Number of pages to be archived:", len(to_be_archived))
+console.print("[green]Number of pages to be archived:", len(to_be_archived))
 
 if len(to_be_created) > 0:
-    print("[green]Creating new pages...")
-    for title in tqdm(to_be_created, total=len(to_be_created)):
+    console.print("[green]Creating new pages...")
+    for title in track(to_be_created):
         metadata = highlights[title]
 
         page_metadata = create_page_metadata(title, metadata)
@@ -202,9 +204,9 @@ if len(to_be_created) > 0:
         )
 
 if len(to_be_updated) > 0:
-    print("[green]Updating existing pages...")
+    console.print("[green]Updating existing pages...")
     extra_pages_to_archive = []
-    for title in tqdm(to_be_updated, total=len(to_be_updated)):
+    for title in track(to_be_updated):
         # Find the page ID
         page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
 
@@ -223,8 +225,8 @@ if len(to_be_updated) > 0:
         )
 
 if len(to_be_archived) > 0:
-    print("[green]Archiving old pages...")
-    for title in tqdm(to_be_archived, total=len(to_be_archived)):
+    console.print("[green]Archiving old pages...")
+    for title in track(to_be_archived):
         # Find the pages IDs - could be multiple
         page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
 
@@ -233,8 +235,8 @@ if len(to_be_archived) > 0:
             notion.pages.update(page_id, archived=True)
 
 if len(extra_pages_to_archive) > 0:
-    print("[green]Archiving duplicated pages...")
+    console.print("[green]Archiving duplicated pages...")
     for page_id in extra_pages_to_archive:
         notion.pages.update(page_id, archived=True)
 
-print("[green]Sync complete!")
+console.print("[green]Sync complete!")
