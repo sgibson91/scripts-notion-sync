@@ -128,9 +128,11 @@ def create_page_metadata(title, metadata):
 
     return page_metadata
 
+
 CI = os.getenv("CI", False)
 if not CI:
     from dotenv import load_dotenv
+
     load_dotenv()
 
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
