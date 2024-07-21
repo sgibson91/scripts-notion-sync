@@ -160,8 +160,14 @@ for shelf in shelves:
     for entry in feed.entries:
         try:
             page_metadata = create_page_metadata(entry, shelf)
+
             goodreads_books.append(
-                {"title": entry.title, "page_metadata": page_metadata}
+                {
+                    "title": page_metadata["properties"]["Title"]["title"][0]["text"][
+                        "content"
+                    ],
+                    "page_metadata": page_metadata,
+                }
             )
         except json.decoder.JSONDecodeError as err:
             console.print(f"[red]Skipping {entry.title}")
