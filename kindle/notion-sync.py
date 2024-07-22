@@ -1,5 +1,6 @@
 import os
 import re
+import unicodedata
 
 import pandas as pd
 from notion_client import Client
@@ -23,6 +24,11 @@ def process_clippings(clippings):
     highlights = {}
 
     for clipping in clippings:
+        # Handle unicode characters in strings
+        clipping = (
+            unicodedata.normalize("NFKD", clipping).encode("ascii", "ignore").decode()
+        )
+
         # Extract book title from clipping
         try:
             match = re.search(r".*(?<=\()", clipping)
@@ -175,6 +181,7 @@ while resp["has_more"]:
                 "archived": page["archived"],
             }
         )
+
 notion_pages = pd.DataFrame(notion_pages)
 set_notion = set(notion_pages["title"].values)
 
@@ -236,7 +243,7 @@ if len(to_be_archived) > 0:
             # Archive the page
             notion.pages.update(page_id, archived=True)
 
-if len(extra_pages_to_archive) > 0:
+if extra_pages_to_archive and len(extra_pages_to_archive) > 0:
     console.print("[green]Archiving duplicated pages...")
     for page_id in extra_pages_to_archive:
         notion.pages.update(page_id, archived=True)
