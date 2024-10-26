@@ -87,6 +87,10 @@
             "status": {
                 "name": "{{ shelf }}"
             }
+        },
+        "Owned?": {
+            "type": "checkbox",
+            "checkbox": false
         }
     }
 }

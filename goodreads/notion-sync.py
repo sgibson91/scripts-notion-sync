@@ -89,6 +89,9 @@ def create_page_metadata(entry, shelf):
     page_metadata["properties"]["Rating"]["number"] = (
         int(entry.user_rating) if int(entry.user_rating) > 0 else None
     )
+    page_metadata["properties"]["Owned?"]["checkbox"] = (
+        "owned" in entry.user_shelves
+    )
 
     if shelf == "currently-reading":
         date_started = datetime.strptime(
