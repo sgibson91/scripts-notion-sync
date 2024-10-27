@@ -91,6 +91,10 @@
         "Owned?": {
             "type": "checkbox",
             "checkbox": false
+        },
+        "Format": {
+            "type": "multi_select",
+            "multi_select": []
         }
     }
 }

@@ -93,6 +93,11 @@ def create_page_metadata(entry, shelf):
         "owned" in entry.user_shelves
     )
 
+    formats = [tag for tag in entry.user_shelves.split(", ") if tag.startswith("format")]
+    formats = [":".join(tag.split("-")[1:]) for tag in formats]
+    for tag in formats:
+        page_metadata["properties"]["Format"]["multi_select"].append({"name": tag})
+
     if shelf == "currently-reading":
         date_started = datetime.strptime(
             entry.user_date_added, "%a, %d %b %Y %H:%M:%S %z"
