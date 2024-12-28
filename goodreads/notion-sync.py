@@ -107,7 +107,7 @@ def create_page_metadata(entry, shelf):
                 "date": {"start": date_started.strftime("%Y-%m-%d")}
             }
         except ValueError:
-            print(f"Could not parse started date for {page_metadata['book_title']}: {entry.user_date_added}")
+            print(f"Could not parse started date for {entry.title}: {entry.user_date_added}")
 
     if shelf.startswith("read") and (shelf != "read-in-part"):
         try:
@@ -118,7 +118,7 @@ def create_page_metadata(entry, shelf):
                 "date": {"start": date_read_at.strftime("%Y-%m-%d")}
             }
         except ValueError:
-            print(f"Could not parse completed date for {page_metadata['book_title']}: {entry.user_read_at}")
+            print(f"Could not parse completed date for {entry.title}: {entry.user_read_at}")
 
     # If the book description is longer than 2000 characters, the upload to
     # Notion will fail. So we chunk up the description into multiple objects
