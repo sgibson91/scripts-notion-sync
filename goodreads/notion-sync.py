@@ -286,7 +286,7 @@ if len(to_be_archived) > 0:
 
 if len(extra_pages_to_archive) > 0:
     console.print("[green]Archiving duplicated pages...")
-    for page_id in extra_pages_to_archive:
+    for page_id in track(extra_pages_to_archive):
         notion.pages.update(page_id, archived=True)
 
 console.print("[green]Sync complete!")
