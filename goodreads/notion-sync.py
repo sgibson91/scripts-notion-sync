@@ -99,14 +99,17 @@ def create_page_metadata(entry, shelf):
         page_metadata["properties"]["Format"]["multi_select"].append({"name": tag})
 
     if shelf == "currently-reading":
-        date_started = datetime.strptime(
-            entry.user_date_added, "%a, %d %b %Y %H:%M:%S %z"
-        )
-        page_metadata["properties"]["Date last started"] = {
-            "date": {"start": date_started.strftime("%Y-%m-%d")}
-        }
+        try:
+            date_started = datetime.strptime(
+                entry.user_date_added, "%a, %d %b %Y %H:%M:%S %z"
+            )
+            page_metadata["properties"]["Date last started"] = {
+                "date": {"start": date_started.strftime("%Y-%m-%d")}
+            }
+        except ValueError:
+            print(f"Could not parse started date for {page_metadata['book_title']}: {entry.user_date_added}")
 
-    if shelf.startswith("read"):
+    if shelf.startswith("read") and (shelf != "read-in-part"):
         try:
             date_read_at = datetime.strptime(
                 entry.user_read_at, "%a, %d %b %Y %H:%M:%S %z"
@@ -115,7 +118,7 @@ def create_page_metadata(entry, shelf):
                 "date": {"start": date_read_at.strftime("%Y-%m-%d")}
             }
         except ValueError:
-            pass
+            print(f"Could not parse completed date for {page_metadata['book_title']}: {entry.user_read_at}")
 
     # If the book description is longer than 2000 characters, the upload to
     # Notion will fail. So we chunk up the description into multiple objects
