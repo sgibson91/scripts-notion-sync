@@ -108,8 +108,7 @@ def create_page_metadata(entry, shelf):
             }
         except ValueError:
             print(f"Could not parse started date for {entry.title}: {entry.user_date_added}")
-
-    if shelf.startswith("read") and (shelf != "read-in-part"):
+    elif shelf.startswith("read") and (shelf != "read-in-part"):
         try:
             date_read_at = datetime.strptime(
                 entry.user_read_at, "%a, %d %b %Y %H:%M:%S %z"
