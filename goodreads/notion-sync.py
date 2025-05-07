@@ -112,7 +112,7 @@ def create_page_metadata(entry, shelf):
     if shelf.startswith("read") and (shelf != "read-in-part"):
         try:
             date_read_at = datetime.strptime(
-                entry.user_read_at, "%a, %d %b %Y %H:%M:%S %z"
+                entry.user_date_added, "%a, %d %b %Y %H:%M:%S %z"
             )
             page_metadata["properties"]["Date last read"] = {
                 "date": {"start": date_read_at.strftime("%Y-%m-%d")}
