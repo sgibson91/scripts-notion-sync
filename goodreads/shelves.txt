@@ -1,7 +1,7 @@
 abandoned
 currently-reading
+partially-read
 read
-read-in-part
 to-read
 to-read-2
 to-read-3
