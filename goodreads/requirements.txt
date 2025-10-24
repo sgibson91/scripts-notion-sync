@@ -1,6 +1,6 @@
 feedparser
 jinja2
-notion-client<=2.5.*
+notion-client<=2.5.0
 pandas
 python-dotenv
 rich
