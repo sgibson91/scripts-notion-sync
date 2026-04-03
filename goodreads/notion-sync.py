@@ -32,14 +32,6 @@ def get_subtitle(title: str) -> str:
     return title.split(":")[1].strip()
 
 
-def extract_series_from_title(title):
-    match = re.search(r"(?<=\().*?(?=#)", title)
-    if match is not None:
-        return match.group(0).replace(",", "").strip()
-    else:
-        return ""
-
-
 def get_series_info(title: str) -> tuple[str, str, str]:
     """Extract book series info from a title string."""
     patterns = [
