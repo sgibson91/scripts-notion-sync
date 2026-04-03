@@ -66,6 +66,7 @@ def get_clean_book_info(book_title: str) -> tuple[str, str, str, str]:
     else:
         subtitle = ""
 
+    book_title = book_title.replace(":", "").replace('"', "'")
     return book_title.strip(), subtitle, series_name, series_num
 
 
