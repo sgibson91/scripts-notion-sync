@@ -105,8 +105,13 @@
             }]
         },
         "Series #": {
-            "type": "number",
-            "number": null
+            "type": "rich_text",
+            "rich_text": [{
+                "type": "text",
+                "text": {
+                    "content": "{{ series_num }}"
+                }
+            }]
         },
         "Would re-read?": {
             "type": "checkbox",
