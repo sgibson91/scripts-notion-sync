@@ -1,5 +1,6 @@
 feedparser
 jinja2
+html-to-markdown
 notion-client<=2.5.0
 pandas
 python-dotenv

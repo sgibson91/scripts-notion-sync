@@ -1,12 +1,14 @@
 import json
 import os
 import re
+import string
 from datetime import datetime
 from pathlib import Path
 
 import feedparser
 import jinja2
 import pandas as pd
+from html_to_markdown import convert
 from notion_client import Client
 from rich.console import Console
 from rich.progress import track
@@ -25,22 +27,47 @@ with open(PATH.joinpath("shelves.txt")) as f:
     shelves = [line.strip("\n") for line in f.readlines()]
 
 
-def clean_book_description(description):
-    # Remove any html tags from the book description
-    description = re.sub(r"(<[^>]*>)", "", description)
-
-    # Ensure any double quotes and newlines are properly escaped or removed
-    description = description.replace('\"', '\\"').replace("\n", "")
-
-    return description
+def get_subtitle(title: str) -> str:
+    """Extract a subtitle from a book's title"""
+    return title.split(":")[1].strip()
 
 
-def extract_series_from_title(title):
-    match = re.search(r"(?<=\().*?(?=#)", title)
-    if match is not None:
-        return match.group(0).replace(",", "").strip()
+def get_series_info(title: str) -> tuple[str, str, str]:
+    """Extract book series info from a title string."""
+    patterns = [
+        r".+ \(((.+?),? #(\d+))\)",  # Single entry (e.g., #3)
+        r".+ \(((.+?),? #(\d+[-\.]\d+))\)",  # Omnibus or novella (e.g., #1-3, #0.1)
+        r".+ \(((.+?),? #(\d+\.\d+-\d+))\)",  # Omnibus with novella (e.g., #0.1-4)
+    ]
+
+    for pattern in patterns:
+        match = re.fullmatch(pattern, title)
+        if match:
+            series = f"({match.group(1).strip()})"
+            series_name = match.group(2).strip()
+            series_num = match.group(3).strip()
+            return series, series_name, series_num
+
+    # No match found
+    return "", "", ""
+
+
+def get_clean_book_info(book_title: str) -> tuple[str, str, str, str]:
+    """Extract title, subtitle, and series"""
+    if ("(" in book_title) and ("#" in book_title):
+        series, series_name, series_num = get_series_info(book_title)
+        book_title = book_title.replace(series, "")
     else:
-        return ""
+        series = series_name = series_num = ""
+
+    if ":" in book_title:
+        subtitle = get_subtitle(book_title)
+        book_title = book_title.replace(subtitle, "")
+    else:
+        subtitle = ""
+
+    book_title = book_title.replace(":", "").replace('"', "'")
+    return book_title.strip(), subtitle, series_name, series_num
 
 
 def create_page_metadata(entry, shelf):
@@ -51,18 +78,22 @@ def create_page_metadata(entry, shelf):
     elif shelf.startswith("to-read-"):
         shelf = "to-read"
 
-    book_description = clean_book_description(entry.book_description)
+    title, subtitle, series, series_num = get_clean_book_info(entry.title)
+    book_description = (
+        convert(entry.book_description)["content"].replace("\n", "").replace('"', "'")
+    )
 
     # Create a mapping of template variables for jinja template
     metadata_vars = {
         "author_name": entry.author_name,
         "book_description": book_description[:2000],
         "book_id": entry.book_id,
-        "book_title": entry.title.replace('"', "'"),
+        "book_title": title,
         "cover_url": entry.book_large_image_url,
-        "rating_num": int(entry.user_rating) if int(entry.user_rating) > 0 else None,
-        "series": extract_series_from_title(entry.title),
+        "series": series,
         "shelf": shelf,
+        "series_num": series_num,
+        "subtitle": subtitle,
     }
     page_metadata = template.render(**metadata_vars)
 
@@ -76,7 +107,7 @@ def create_page_metadata(entry, shelf):
             os.mkdir(PATH.joinpath("errors"))
 
         # Create a file to save the faulty json to
-        fn = re.sub(r"[^\w]", "_", entry.title) + ".json"
+        fn = re.sub(r"[^\w]", "_", title) + ".json"
         with open(PATH.joinpath("errors", fn), "w") as f:
             f.write(page_metadata)
 
@@ -89,11 +120,14 @@ def create_page_metadata(entry, shelf):
     page_metadata["properties"]["Rating"]["number"] = (
         int(entry.user_rating) if int(entry.user_rating) > 0 else None
     )
-    page_metadata["properties"]["Owned?"]["checkbox"] = (
-        "owned" in entry.user_shelves
+    page_metadata["properties"]["Owned?"]["checkbox"] = "owned" in entry.user_shelves
+    page_metadata["properties"]["Would re-read?"]["checkbox"] = (
+        "re-read" in entry.user_shelves
     )
 
-    formats = [tag for tag in entry.user_shelves.split(", ") if tag.startswith("format")]
+    formats = [
+        tag for tag in entry.user_shelves.split(", ") if tag.startswith("format")
+    ]
     formats = [":".join(tag.split("-")[1:]) for tag in formats]
     for tag in formats:
         page_metadata["properties"]["Format"]["multi_select"].append({"name": tag})
@@ -107,7 +141,9 @@ def create_page_metadata(entry, shelf):
                 "date": {"start": date_started.strftime("%Y-%m-%d")}
             }
         except ValueError:
-            print(f"Could not parse started date for {entry.title}: {entry.user_date_added}")
+            print(
+                f"Could not parse started date for {entry.title}: {entry.user_date_added}"
+            )
     elif shelf.startswith("read"):
         try:
             date_read_at = datetime.strptime(
@@ -117,7 +153,9 @@ def create_page_metadata(entry, shelf):
                 "date": {"start": date_read_at.strftime("%Y-%m-%d")}
             }
         except ValueError:
-            print(f"Could not parse completed date for {entry.title}: {entry.user_read_at}")
+            print(
+                f"Could not parse completed date for {entry.title}: {entry.user_read_at}"
+            )
 
     # If the book description is longer than 2000 characters, the upload to
     # Notion will fail. So we chunk up the description into multiple objects

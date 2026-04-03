@@ -1,6 +1,5 @@
 {
-    "children": [
-        {
+    "children": [{
             "object": "block",
             "type": "image",
             "image": {
@@ -95,6 +94,28 @@
         "Format": {
             "type": "multi_select",
             "multi_select": []
+        },
+        "Subtitle": {
+            "type": "rich_text",
+            "rich_text": [{
+                "type": "text",
+                "text": {
+                    "content": "{{ subtitle }}"
+                }
+            }]
+        },
+        "Series #": {
+            "type": "rich_text",
+            "rich_text": [{
+                "type": "text",
+                "text": {
+                    "content": "{{ series_num }}"
+                }
+            }]
+        },
+        "Would re-read?": {
+            "type": "checkbox",
+            "checkbox": false
         }
     }
 }
