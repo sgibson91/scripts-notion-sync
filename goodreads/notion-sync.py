@@ -27,13 +27,6 @@ with open(PATH.joinpath("shelves.txt")) as f:
     shelves = [line.strip("\n") for line in f.readlines()]
 
 
-def remove_punctuation(input_string: str) -> str:
-    """Replace punctuation in a string with an empty char"""
-    input_string = input_string.replace("&", "and")
-    regex_pattern = f"[{re.escape(string.punctuation.replace("-", ""))}’]"  # fmt: skip
-    return re.sub(regex_pattern, "", input_string)
-
-
 def get_subtitle(title: str) -> str:
     """Extract a subtitle from a book's title"""
     return title.split(":")[1].strip()
@@ -59,7 +52,7 @@ def get_series_info(title: str) -> tuple[str, str, str]:
         match = re.fullmatch(pattern, title)
         if match:
             series = f"({match.group(1).strip()})"
-            series_name = remove_punctuation(match.group(2)).strip()
+            series_name = match.group(2).strip()
             series_num = match.group(3).strip()
             return series, series_name, series_num
 
@@ -68,7 +61,7 @@ def get_series_info(title: str) -> tuple[str, str, str]:
 
 
 def get_clean_book_info(book_title: str) -> tuple[str, str, str, str]:
-    """Extract title, subtitle, and series and ensure it's filesystem safe"""
+    """Extract title, subtitle, and series"""
     if ("(" in book_title) and ("#" in book_title):
         series, series_name, series_num = get_series_info(book_title)
         book_title = book_title.replace(series, "")
@@ -81,7 +74,6 @@ def get_clean_book_info(book_title: str) -> tuple[str, str, str, str]:
     else:
         subtitle = ""
 
-    book_title = remove_punctuation(book_title)
     return book_title.strip(), subtitle, series_name, series_num
 
 
