@@ -1,5 +1,6 @@
 abandoned
 currently-reading
+did-not-finish
 partially-read
 read
 to-read
