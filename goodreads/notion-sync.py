@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import string
 from datetime import datetime
 from pathlib import Path
 
@@ -131,6 +130,13 @@ def create_page_metadata(entry, shelf):
     formats = [":".join(tag.split("-")[1:]) for tag in formats]
     for tag in formats:
         page_metadata["properties"]["Format"]["multi_select"].append({"name": tag})
+
+    topics = [tag for tag in entry.user_shelves.split(", ") if tag.startswith("topic")]
+    topics = ["-".join(tag.split("-")[1:]) for tag in topics]
+    for tag in topics:
+        page_metadata["properties"]["Topics"]["multi_select"].append(
+            {"name": tag, "color": "default"}
+        )
 
     if shelf == "currently-reading":
         try:
