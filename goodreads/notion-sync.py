@@ -281,55 +281,120 @@ console.print("[green]Number of pages to be created:", len(to_be_created))
 to_be_archived = notion_pages_title_set.difference(goodreads_books_title_set)
 console.print("[green]Number of pages to be archived:", len(to_be_archived))
 
-if len(to_be_created) > 0:
-    console.print("[green]Creating new pages...")
-    for title in track(to_be_created):
-        # Find the corresponding row in the Goodreads df
-        row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+if CI:
+    if len(to_be_created) > 0:
+        console.print("[green]Creating new pages...")
+        for i, title in enumerate(to_be_created):
+            # Find the corresponding row in the Goodreads df
+            row = goodreads_books[goodreads_books["title"] == title].iloc[0]
 
-        notion.pages.create(
-            parent={"database_id": NOTION_DATABASE_ID},
-            icon=row["page_metadata"]["icon"],
-            properties=row["page_metadata"]["properties"],
-            children=row["page_metadata"]["children"],
-        )
+            notion.pages.create(
+                parent={"database_id": NOTION_DATABASE_ID},
+                icon=row["page_metadata"]["icon"],
+                properties=row["page_metadata"]["properties"],
+                children=row["page_metadata"]["children"],
+            )
 
-if len(to_be_updated) > 0:
-    console.print("[green]Updating existing pages...")
-    extra_pages_to_archive = []
-    for title in track(to_be_updated):
-        # Find the page ID
-        page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
+            console.print(f"[blue]Pages created: {i+1}/{len(to_be_created)}")
 
-        if len(page_id) > 1:
-            # Append extra IDs to list to archive later
-            extra_pages_to_archive.extend(page_id[1:])
+    if len(to_be_updated) > 0:
+        console.print("[green]Updating existing pages...")
+        extra_pages_to_archive = []
+        for i, title in enumerate(to_be_updated):
+            # Find the page ID
+            page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
 
-        page_id = page_id.values[0]
+            if len(page_id) > 1:
+                # Append extra IDs to list to archive later
+                extra_pages_to_archive.extend(page_id[1:])
 
-        # Find the corresponding row in the Goodreads df
-        row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+            page_id = page_id.values[0]
 
-        # Update the page
-        notion.pages.update(
-            page_id,
-            properties=row["page_metadata"]["properties"],
-            children=row["page_metadata"]["children"],
-        )
+            # Find the corresponding row in the Goodreads df
+            row = goodreads_books[goodreads_books["title"] == title].iloc[0]
 
-if len(to_be_archived) > 0:
-    console.print("[green]Archiving old pages...")
-    for title in track(to_be_archived):
-        # Find the pages IDs - could be multiple
-        page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
+            # Update the page
+            notion.pages.update(
+                page_id,
+                properties=row["page_metadata"]["properties"],
+                children=row["page_metadata"]["children"],
+            )
 
-        for page_id in page_ids:
-            # Archive the page
+            console.print(f"[blue]Pages updated: {i+1}/{len(to_be_updated)}")
+
+    if len(to_be_archived) > 0:
+        console.print("[green]Archiving old pages...")
+        for i, title in enumerate(to_be_archived):
+            # Find the pages IDs - could be multiple
+            page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
+
+            for page_id in page_ids:
+                # Archive the page
+                notion.pages.update(page_id, archived=True)
+
+            console.print(f"[blue]Old pages archived: {i+1}/{len(to_be_archived)}")
+
+    if len(extra_pages_to_archive) > 0:
+        console.print("[green]Archiving duplicated pages...")
+        for i, page_id in enumerate(extra_pages_to_archive):
             notion.pages.update(page_id, archived=True)
 
-if len(extra_pages_to_archive) > 0:
-    console.print("[green]Archiving duplicated pages...")
-    for page_id in track(extra_pages_to_archive):
-        notion.pages.update(page_id, archived=True)
+        console.print(
+            f"[blue]Duplicate pages archived: {i+1}/{len(extra_pages_to_archive)}"
+        )
 
-console.print("[green]Sync complete!")
+    console.print("[green]Sync complete!")
+
+else:
+    if len(to_be_created) > 0:
+        console.print("[green]Creating new pages...")
+        for title in track(to_be_created):
+            # Find the corresponding row in the Goodreads df
+            row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+
+            notion.pages.create(
+                parent={"database_id": NOTION_DATABASE_ID},
+                icon=row["page_metadata"]["icon"],
+                properties=row["page_metadata"]["properties"],
+                children=row["page_metadata"]["children"],
+            )
+
+    if len(to_be_updated) > 0:
+        console.print("[green]Updating existing pages...")
+        extra_pages_to_archive = []
+        for title in track(to_be_updated):
+            # Find the page ID
+            page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
+
+            if len(page_id) > 1:
+                # Append extra IDs to list to archive later
+                extra_pages_to_archive.extend(page_id[1:])
+
+            page_id = page_id.values[0]
+
+            # Find the corresponding row in the Goodreads df
+            row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+
+            # Update the page
+            notion.pages.update(
+                page_id,
+                properties=row["page_metadata"]["properties"],
+                children=row["page_metadata"]["children"],
+            )
+
+    if len(to_be_archived) > 0:
+        console.print("[green]Archiving old pages...")
+        for title in track(to_be_archived):
+            # Find the pages IDs - could be multiple
+            page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
+
+            for page_id in page_ids:
+                # Archive the page
+                notion.pages.update(page_id, archived=True)
+
+    if len(extra_pages_to_archive) > 0:
+        console.print("[green]Archiving duplicated pages...")
+        for page_id in track(extra_pages_to_archive):
+            notion.pages.update(page_id, archived=True)
+
+    console.print("[green]Sync complete!")
