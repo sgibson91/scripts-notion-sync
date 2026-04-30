@@ -116,6 +116,10 @@
         "Would re-read?": {
             "type": "checkbox",
             "checkbox": false
+        },
+        "Topics": {
+            "type": "multi_select",
+            "multi_select": []
         }
     }
 }
