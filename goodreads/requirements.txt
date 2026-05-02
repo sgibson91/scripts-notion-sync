@@ -4,5 +4,5 @@ html-to-markdown==3.1.0
 notion-client<=2.5.0
 pandas==3.0.2
 python-dotenv==1.2.2
-rich==14.3.3
+rich==15.0.0
 tqdm==4.67.3
