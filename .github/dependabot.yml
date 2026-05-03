@@ -10,3 +10,10 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-minor"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-uodatr:semver-minor"]
