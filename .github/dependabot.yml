@@ -16,4 +16,4 @@ updates:
       interval: "monthly"
     ignore:
       - dependency-name: "*"
-        update-types: ["version-uodatr:semver-minor"]
+        update-types: ["version-update:semver-minor"]
