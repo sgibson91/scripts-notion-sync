@@ -1,6 +1,8 @@
 import json
 import os
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -206,6 +208,41 @@ rss_base_url = f"https://www.goodreads.com/review/list_rss/122919504?key={GOODRE
 # Authenticate the notion client
 notion = Client(auth=NOTION_TOKEN)
 
+# Number of worker threads to use for parallel Notion API calls. Read from the
+# environment (CPU count); fall back to os.cpu_count() when the var is unset.
+MAX_WORKERS = int(os.getenv("CPU_COUNT") or os.cpu_count() or 1)
+
+# Notion's API rate limit averages ~3 requests/second. Sleeping this long at the
+# start of each worker call keeps the aggregate request rate under the limit:
+# with N workers each sleeping (N / 3)s, the fleet issues ~3 requests/second.
+# ponytail: fixed-rate throttle, not an adaptive one. If Notion still returns
+# 429s, upgrade to honouring the Retry-After header with a backoff/retry wrapper.
+RATE_LIMIT_DELAY = MAX_WORKERS / 3
+
+
+def run_in_parallel(func, items, progress_label=None):
+    """Run ``func`` over ``items`` across a thread pool.
+
+    Each task sleeps RATE_LIMIT_DELAY before its API call so the combined
+    request rate across all workers stays under Notion's ~3 req/s limit.
+    Exceptions from any task are re-raised after the pool drains.
+    """
+    items = list(items)
+    if not items:
+        return
+
+    def _worker(item):
+        time.sleep(RATE_LIMIT_DELAY)
+        return func(item)
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [executor.submit(_worker, item) for item in items]
+        for i, future in enumerate(as_completed(futures)):
+            # Surface any exception from the worker.
+            future.result()
+            if progress_label:
+                console.print(f"[blue]{progress_label}: {i + 1}/{len(items)}")
+
 # Retrieve all the books in the Goodreads RSS feeds for each shelf
 goodreads_books = []
 for shelf in shelves:
@@ -281,120 +318,65 @@ console.print("[green]Number of pages to be created:", len(to_be_created))
 to_be_archived = notion_pages_title_set.difference(goodreads_books_title_set)
 console.print("[green]Number of pages to be archived:", len(to_be_archived))
 
-if CI:
-    if len(to_be_created) > 0:
-        console.print("[green]Creating new pages...")
-        for i, title in enumerate(to_be_created):
-            # Find the corresponding row in the Goodreads df
-            row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+console.print(f"[green]Using {MAX_WORKERS} worker thread(s) for Notion API calls")
 
-            notion.pages.create(
-                parent={"database_id": NOTION_DATABASE_ID},
-                icon=row["page_metadata"]["icon"],
-                properties=row["page_metadata"]["properties"],
-                children=row["page_metadata"]["children"],
-            )
 
-            console.print(f"[blue]Pages created: {i+1}/{len(to_be_created)}")
+def create_page(title):
+    """Create a single Notion page for the given Goodreads title."""
+    row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+    notion.pages.create(
+        parent={"database_id": NOTION_DATABASE_ID},
+        icon=row["page_metadata"]["icon"],
+        properties=row["page_metadata"]["properties"],
+        children=row["page_metadata"]["children"],
+    )
 
-    if len(to_be_updated) > 0:
-        console.print("[green]Updating existing pages...")
-        extra_pages_to_archive = []
-        for i, title in enumerate(to_be_updated):
-            # Find the page ID
-            page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
 
-            if len(page_id) > 1:
-                # Append extra IDs to list to archive later
-                extra_pages_to_archive.extend(page_id[1:])
+def update_page(title):
+    """Update the Notion page matching the given Goodreads title."""
+    page_id = notion_pages["page_id"].loc[notion_pages["title"] == title].values[0]
+    row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+    notion.pages.update(
+        page_id,
+        properties=row["page_metadata"]["properties"],
+        children=row["page_metadata"]["children"],
+    )
 
-            page_id = page_id.values[0]
 
-            # Find the corresponding row in the Goodreads df
-            row = goodreads_books[goodreads_books["title"] == title].iloc[0]
+def archive_title(title):
+    """Archive every Notion page matching the given title (may be several)."""
+    page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
+    for page_id in page_ids:
+        notion.pages.update(page_id, archived=True)
 
-            # Update the page
-            notion.pages.update(
-                page_id,
-                properties=row["page_metadata"]["properties"],
-                children=row["page_metadata"]["children"],
-            )
 
-            console.print(f"[blue]Pages updated: {i+1}/{len(to_be_updated)}")
+def archive_page(page_id):
+    """Archive a single Notion page by ID."""
+    notion.pages.update(page_id, archived=True)
 
-    if len(to_be_archived) > 0:
-        console.print("[green]Archiving old pages...")
-        for i, title in enumerate(to_be_archived):
-            # Find the pages IDs - could be multiple
-            page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
 
-            for page_id in page_ids:
-                # Archive the page
-                notion.pages.update(page_id, archived=True)
+# Duplicate detection is pure dataframe work (no API calls), so compute the
+# extra page IDs to archive up front, before the parallel update phase.
+extra_pages_to_archive = []
+for title in to_be_updated:
+    page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
+    if len(page_id) > 1:
+        extra_pages_to_archive.extend(page_id[1:])
 
-            console.print(f"[blue]Old pages archived: {i+1}/{len(to_be_archived)}")
+if len(to_be_created) > 0:
+    console.print("[green]Creating new pages...")
+    run_in_parallel(create_page, to_be_created, "Pages created")
 
-    if len(extra_pages_to_archive) > 0:
-        console.print("[green]Archiving duplicated pages...")
-        for i, page_id in enumerate(extra_pages_to_archive):
-            notion.pages.update(page_id, archived=True)
+if len(to_be_updated) > 0:
+    console.print("[green]Updating existing pages...")
+    run_in_parallel(update_page, to_be_updated, "Pages updated")
 
-        console.print(
-            f"[blue]Duplicate pages archived: {i+1}/{len(extra_pages_to_archive)}"
-        )
+if len(to_be_archived) > 0:
+    console.print("[green]Archiving old pages...")
+    run_in_parallel(archive_title, to_be_archived, "Old pages archived")
 
-    console.print("[green]Sync complete!")
+if len(extra_pages_to_archive) > 0:
+    console.print("[green]Archiving duplicated pages...")
+    run_in_parallel(archive_page, extra_pages_to_archive, "Duplicate pages archived")
 
-else:
-    if len(to_be_created) > 0:
-        console.print("[green]Creating new pages...")
-        for title in track(to_be_created):
-            # Find the corresponding row in the Goodreads df
-            row = goodreads_books[goodreads_books["title"] == title].iloc[0]
-
-            notion.pages.create(
-                parent={"database_id": NOTION_DATABASE_ID},
-                icon=row["page_metadata"]["icon"],
-                properties=row["page_metadata"]["properties"],
-                children=row["page_metadata"]["children"],
-            )
-
-    if len(to_be_updated) > 0:
-        console.print("[green]Updating existing pages...")
-        extra_pages_to_archive = []
-        for title in track(to_be_updated):
-            # Find the page ID
-            page_id = notion_pages["page_id"].loc[notion_pages["title"] == title]
-
-            if len(page_id) > 1:
-                # Append extra IDs to list to archive later
-                extra_pages_to_archive.extend(page_id[1:])
-
-            page_id = page_id.values[0]
-
-            # Find the corresponding row in the Goodreads df
-            row = goodreads_books[goodreads_books["title"] == title].iloc[0]
-
-            # Update the page
-            notion.pages.update(
-                page_id,
-                properties=row["page_metadata"]["properties"],
-                children=row["page_metadata"]["children"],
-            )
-
-    if len(to_be_archived) > 0:
-        console.print("[green]Archiving old pages...")
-        for title in track(to_be_archived):
-            # Find the pages IDs - could be multiple
-            page_ids = notion_pages[notion_pages["title"] == title]["page_id"].values
-
-            for page_id in page_ids:
-                # Archive the page
-                notion.pages.update(page_id, archived=True)
-
-    if len(extra_pages_to_archive) > 0:
-        console.print("[green]Archiving duplicated pages...")
-        for page_id in track(extra_pages_to_archive):
-            notion.pages.update(page_id, archived=True)
-
-    console.print("[green]Sync complete!")
+console.print("[green]Sync complete!")
